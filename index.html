@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <title>BudgetBud</title>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .error{
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Carousel</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarCollapse">
+        <ul class="navbar-nav me-auto mb-2 mb-md-0">
+          <li class="nav-item">
+            <a class="nav-link active" aria-current="page" href="#">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Link</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link disabled">Disabled</a>
+          </li>
+        </ul>
+        <form class="d-flex">
+          <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+          <button class="btn btn-outline-success" type="submit">Search</button>
+        </form>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container marketing" style="margin-top:100px;">
+      <div class="row">
+        <div>
+          <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#addItemModal">Add item</button>
+        </div>
+      </div>
+      <div id="item-list" class="row">
+        <div class="spinner-grow" role="status">
+  <span class="visually-hidden"></span>
+</div>
+      </div><!-- /.row -->
+    </div>
+  </main>
+
+</body>
+<script src="js/jquery-3.6.0.min.js"></script>
+<script src="js/jquery.validate.min.js"></script>
+<script src="js/bootstrap.bundle.min.js"></script>
+
+<!-- EditModal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input id="id" type="text" type="hidden"/>
+        <input id="name" type="text" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary save-item-button" onClick="saveItem()">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AddItemModal -->
+<div class="modal fade" id="addItemModal" tabindex="-1"aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="addItemForm" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Add Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label"></label>
+              <input name="name" type="text" class="form-control required" placeholder="Enter new item">
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+
+$('#addItemForm').validate({
+  submitHandler: function(form){
+    var item =Object.fromEntries((new FormData(form)).entries());
+    $.ajax({
+      url: 'rest/items',
+      type: 'POST',
+      data: JSON.stringify(item),
+      contentType: "application/json",
+      dataType: "json",
+      success: function(result) {
+        $("#addItemModal").modal('hide');
+        $("#item-list").html('<div id="item-list" class="row"><div class="spinner-grow" role="status"><span class="visually-hidden"></span></div>');
+        getItems();
+      }
+    });
+  }
+});
+
+getItems();
+
+
+function getItems(){
+  $.get("rest/items", function(data) {
+    $("#item-list").html("");
+    var html = "";
+    for(let i = 0; i < data.length; i++ ){
+      html += `
+      <div class="col-lg-4">
+        <h2>`+ data[i].Name +`</h2>
+        <p>`+ data[i].Id +`</p>
+        <p>
+          <button type="button" class="btn btn-primary item-button" >
+              Edit
+          </button>
+          <div class="btn-group" role="group" aria-label="First group">
+            <button type="button" class="btn btn-primary item-button" onClick=showModal(`+data[i].Id+`)>Edit</button>
+            <button type="button" class="btn btn-danger item-button" onClick=deleteItem(`+data[i].Id+`)>Delete</button>
+          </div>
+        </p>
+      </div> `;
+    }
+
+    $("#item-list").html(html);
+    console.log(data);
+  });
+
+}
+
+function showModal(id){
+  $('item-button').attr('disabled', true);
+
+  $.get('rest/items/'+id, function(data){
+    //$("#exampleModal .modal-body").html(id);
+    $("#id").val(data.Id);
+    $("#name").val(data.Name);
+    $("#exampleModal").modal('show');
+    $('item-button').attr('disabled', false);
+  });
+}
+
+function saveItem(){
+  $('.save-item-button').attr('disabled', true);
+  var item = {};
+  item.id = $('#id').val();
+  item.name = $('#name').val();
+
+  $.ajax({
+    url: 'rest/items/' + $('#id').val(),
+    type: 'PUT',
+    data: JSON.stringify(item),
+    contentType: "application/json",
+    dataType: "json",
+    success: function(result) {
+      $("#exampleModal").modal('hide');
+      $('.save-item-button').attr('disabled', false);
+      $("#item-list").html('<div id="item-list" class="row"><div class="spinner-grow" role="status"><span class="visually-hidden"></span></div>');
+      getItems();
+    }
+  });
+}
+
+
+function deleteItem(id){
+  $('item-button').attr('disabled', true);
+  $.ajax({
+    url: 'rest/items/'+id,
+    type: 'DELETE',
+    success: function(result) {
+      $("#item-list").html('<div id="item-list" class="row"><div class="spinner-grow" role="status"><span class="visually-hidden"></span></div>');
+      getItems();
+    }
+  });
+}
+
+</script>
+
+
+
+
+
+</html>
